@@ -1,0 +1,72 @@
+name: Android-App bauen
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code holen
+        uses: actions/checkout@v4
+
+      - name: Node einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Java einrichten
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Pakete installieren
+        run: npm install
+
+      - name: Android-Projekt erzeugen
+        run: npx cap add android
+
+      - name: App-Symbol und Startbild erzeugen
+        run: npx capacitor-assets generate --android --iconBackgroundColor "#0F6E5C" --iconBackgroundColorDark "#0F6E5C" --splashBackgroundColor "#0F6E5C" --splashBackgroundColorDark "#0F6E5C"
+
+      - name: Symbol für Mitteilungen einfügen
+        run: |
+          mkdir -p android/app/src/main/res/drawable
+          cp assets/ic_stat_lebensadmin.png android/app/src/main/res/drawable/ic_stat_lebensadmin.png
+
+      - name: App-Dateien übernehmen
+        run: npx cap sync android
+
+      - name: Versionsnummer setzen
+        run: |
+          sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          sed -i "s/versionName \"[^\"]*\"/versionName \"1.${{ github.run_number }}\"/" android/app/build.gradle
+
+      - name: Immer denselben Signaturschlüssel verwenden
+        run: |
+          mkdir -p ~/.android
+          cp signing/debug.keystore ~/.android/debug.keystore
+
+      - name: App bauen
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: App-Datei benennen
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk Lebens-Admin.apk
+
+      - name: Als Download veröffentlichen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.${{ github.run_number }}
+          name: Lebens-Admin 1.${{ github.run_number }}
+          body: "Zum Installieren auf dem Android-Handy: Lebens-Admin.apk antippen und herunterladen."
+          files: Lebens-Admin.apk
+          make_latest: true
