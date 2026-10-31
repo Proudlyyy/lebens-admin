@@ -1,0 +1,11 @@
+{
+  "appId": "de.lebensadmin.app",
+  "appName": "Lebens-Admin",
+  "webDir": "www",
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_lebensadmin",
+      "iconColor": "#0F6E5C"
+    }
+  }
+}
